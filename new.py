@@ -1,3 +1,4 @@
+# %load EB-adLIF.py
 #!/usr/bin/python
 # Event-based Brunel network
 import numpy as np
@@ -43,6 +44,7 @@ def V_update(t,t0,I,tau_m):
     return I*np.exp(-(t-t0)/tau_m)
 # Intializtion 
 #@jit
+
 def run(params,sim_time):
     """Event-driven simualtion of the brunel network i
         TODO: class? """
@@ -63,6 +65,8 @@ def run(params,sim_time):
     Nindetity[NE:]= -params['g'] # set g
     Jext =params['J'] # Jext = J by default
     J= params['J']
+    b = params['b'] #adaptation increment
+    tau_w = params['tau_w']#timescale of adaptation
     k = int(N*p)
     kI = int(NI*p)
     kE = int(NE*p)
@@ -86,16 +90,19 @@ def run(params,sim_time):
     #init volatege
     Vm =np.random.normal(0,0.1,N)
     Vm[:] = 0
+    W = np.random.normal(0,0.1,N)
+    W[:]  =0
+    wt = np.zeros([N])#time of previous adaptation event
     spikes0 = Vm>Vthr
     #Q - is the main queue of events
     Q = SortedList()#np.zeros(N)
     et = np.zeros(N) #time of the previous event for each neuron 
     # Init previous spike vector 
-    previous_st = np.zeros(N)*-1000
+    previous_st = np.zeros(N)*-10000
 
     st = [] # list of spikes
     gid = []# list of unit id's #consider storing to memory for big simualtions
-#    print(nu_ex,expR)
+    print(nu_ex,expR)
     # Initialize 
     np.random.seed()
     for n in range(N):
@@ -106,30 +113,29 @@ def run(params,sim_time):
     t=0
     print(NE,NI)
     while t<sim_time:
+
         t,n,event = Q[0]
         Q.pop(index=0)
-
-        if t<et[n]:
-            print(t,n,et[n],event)
-            print(len(Q))
-            print('AS')
-            break
-
         if (t-previous_st[n])>tau_ref: # Refactory period
             if event=='I':
                 # Evolve voltage from previos event and V to current
-                Vm[n] = V_update(t,et[n],Vm[n],tau_m)+Jext
+
+                #update adaptation
+                W[n] = V_update(t,et[n],W[n],tau_w)
+                #update voltage
+                Vm[n] = V_update(t,et[n],Vm[n],tau_m)+Jext-W[n]
 #                if n ==0:
 #                    print(Vm[n])
                 et[n] = t
-
             if event =='S':
                 # record
                 st.append(t)
                 gid.append(n)
                 previous_st[n]=t
-                et[n] = t
                 Vm[n] = Vres# set to reset V
+                W[n] = V_update(t,et[n],W[n],tau_w)+b
+                #Vm[n]-= W[n]
+                et[n] = t
                 # Send spikes
                 # Code for generating conn on the go (fast, but so far only fixed out-degree is possible)
                 #np.random.seed(N+n)
@@ -145,52 +151,50 @@ def run(params,sim_time):
                         Q.add((t+d,n_out,'N'))#IPSP
 
             if event =='N':
-                Vm[n] =V_update(t,et[n],Vm[n],tau_m)-(J*g)
+                W[n] =V_update(t,et[n],W[n],tau_w)
+                Vm[n] =V_update(t,et[n],Vm[n],tau_m)-(J*g)-W[n]
                 et[n] = t
             if event == 'P':
-                Vm[n] =V_update(t,et[n],Vm[n],tau_m)+J
+                W[n] = V_update(t,et[n],W[n],tau_w)
+                Vm[n] =V_update(t,et[n],Vm[n],tau_m)+J-W[n]
                 et[n] = t
-
             if Vm[n]>=Vthr:
                 #Handle spontaneous spikes
                 Q.add((t,n,'S'))
-
-
         if event=='I':
                 #next input 
             #np.random.seed() # if conn is generated on the go
             #make sure to insert noise even if event is ignored ! 
+
             event_t = random.expovariate(expR)
             Q.add((t+event_t,n,'I'))
-
-
     params_json = json.dumps(params)
     hash_name = hashlib.sha256(params_json.encode('utf-8')).hexdigest()
+    print(hash_name)
     with h5py.File('sim/'+str(hash_name),'w',libver='latest') as f:
         f['st']  =st
         f['uid']  =gid
         f['params'] =params_json
 
     print(len(st)/N/(sim_time/1000))
-
     return st, gid
 
-
 if __name__ == "__main__":
-
     # Set params
     params = {'Vthr': 20,
               'Vres': 10,
               'V0':0,
               'tau_ref': 2.0,
-              'tau_m':20,
-              'd':1.5,
+              'tau_m':40,
+              'd':3.5,
               'N':1000,
-              'epsilon':0.2,
+              'epsilon':0.05,
               'p':0.1,
-              'g':6,
-              'J':0.5,
-              'eta':.8}
-    sim_time = 100
+              'g':4,
+              'J':1.2,
+              'eta':1.0,
+              'tau_w':1000.,
+              'b':1.}
+    sim_time = 1000
+    st,gid = run(params, sim_time)
 
-    run(params, sim_time)

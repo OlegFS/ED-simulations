@@ -5,6 +5,10 @@
 /data
 /JZ
 /conn
+test
+*.csv
+*.xls
+*.txt
 #video
 *.mp4
 *.npy
