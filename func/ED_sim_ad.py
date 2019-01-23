@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# Event-based Brunel network
 import numpy as np
 import hashlib
 from numba import jit
@@ -9,10 +7,6 @@ import pickle
 import h5py as h5py
 import json
 import random
-iimport collections
-import multiprocessing
-
-print(tuple(result))
 np.random.seed()
 random.seed()
 def save_obj(obj, name ):
@@ -28,7 +22,7 @@ def fixed_in_conn(NE,NI,p):
     """Helper funvtion to generate fixed indegree"""
     conn = []
     kE = int(p*NE)
-    kI  = int(p*NI)
+    kI  =int(p*NI)
     for n in range(NE+NI):
         # Set fixed in-degree
         projections = np.hstack([np.random.randint(0,NE,kE),np.random.randint(NE,NE+NI,kI)])
@@ -47,12 +41,13 @@ def V_update(t,t0,I,tau):
     """t0 - time of the event
      t - current time """
     return I*np.exp(-(t-t0)/tau)
-# Intializtion 
-#@jit
 
-def run(params,sim_time):
+# Intializtion 
+
+def run(params,sim_time=1000000):
     """Event-driven simualtion of the brunel network i
         TODO: class? """
+
     # Set params
     Vthr = params['Vthr']
     Vres = params['Vres']
@@ -70,7 +65,7 @@ def run(params,sim_time):
     Nindetity[NE:]= -params['g'] # set g
     Jext =params['J'] # Jext = J by default
     J= params['J']
-    J_inh = g*J
+    J_inh = -g*J
     b = params['b'] #adaptation increment
     a = params['a'] # subthreshold adaptation
     tau_w = params['tau_w']#timescale of adaptation
@@ -85,18 +80,18 @@ def run(params,sim_time):
     # mean of exponential dist
     expR=(p_rate*kE)# it's Beta in numpy implementation
     print(kE)
-    sim_time = sim_time#ms
     # init conn 
     try:
        # connectivity generation is a weak stop of this implemetnation at the moment
-       conn_dict = load_obj('conn/%s_fixed_in.pkl'%N)
+       conn_dict = load_obj('conn/%s_fixed_in.pkl'%NI)
     except:
         print('Generating Connectivity')
         conn_dict = fixed_in_conn(NE,NI,p)
-        save_obj(conn_dict, 'conn/%s_fixed_in.pkl'%N)
+        save_obj(conn_dict, 'conn/%s_fixed_in.pkl'%NI)
     #init volatege
     Vm =np.random.normal(0,0.1,N)
     W = np.random.normal(0,0.1,N)
+    W[:] = 0
     wt = np.zeros([N])#time of previous adaptation event
     spikes0 = Vm>Vthr
     #Q - is the main queue of events
@@ -106,7 +101,9 @@ def run(params,sim_time):
     previous_st = np.zeros(N)*-1000
 
     st = [] # list of spikes
-    gid = []# list of unit id's #consider storing to memory for big simualtions
+    gid= []# list of unit id's #consider storing to memory for big simualtions
+    V_ = 0
+    print(J_inh)
     print(nu_ex,expR)
     # Initialize 
     np.random.seed()
@@ -120,15 +117,15 @@ def run(params,sim_time):
     while t<sim_time:
         t,n,event = Q[0]
         Q.pop(index=0)
-
-        if (t-previous_st[n])>tau_ref: # Refactory period
+        if (t-previous_st[n])>tau_ref:#Refactory period
             if event=='I':
                 # Evolve voltage from previos event and V to current
                 #update adaptation
-                V_= V_update(t,et[n],Vm[n],tau_m)
+#                if n<NE:
                 W[n] = a*V_+V_update(t,et[n],W[n],tau_w)
+                V_= V_update(t,et[n],Vm[n]+W[n],tau_m)
                 #update voltage
-                Vm[n] =V_+Jext-W[n]
+                Vm[n] =V_ + Jext -W[n]
               #  if n ==0:
               #      print(Vm[n])
                 et[n] = t
@@ -137,11 +134,12 @@ def run(params,sim_time):
                 st.append(t)
                 gid.append(n)
                 previous_st[n]=t
-
-                V_= V_update(t,et[n],Vm[n],tau_m)
+               # if n<NE:
                 W[n] = a*V_+V_update(t,et[n],W[n],tau_w)+b
+                Vm[n] = Vres-W[n]
+                #V_= V_update(t,et[n],Vm[n]-W[n],tau_m)
                 #update voltage
-                Vm[n] = Vres#-W[n]# set to reset V
+                # set to reset V
                 et[n] = t
                 # Send spikes
                 # Code for generating conn on the go (fast, but so far only fixed out-degree is possible)
@@ -150,35 +148,38 @@ def run(params,sim_time):
                 #out_deg = np.hstack([out_deg, np.random.randint(NE+1,NE+NI,kI)]) # Inhibitory out
                 out_deg = conn_dict.get(n)
                 sign = Nindetity[n]
-
                 for n_out in out_deg:
                     # Input events
                     if sign>0:
                         Q.add((t+d,n_out,'P'))#EPSP
                     else:
                         Q.add((t+d,n_out,'N'))#IPSP
-
             if event =='N':
-                V_= V_update(t,et[n],Vm[n],tau_m)
-                W[n] =  a*V_+V_update(t,et[n],W[n],tau_w)
-                #update voltage
-                Vm[n] =V_-(g*J)-W[n]
-                et[n] = t
-
+                # if n<NE:
+                 W[n] = a*V_+V_update(t,et[n],W[n],tau_w)
+                 V_= V_update(t,et[n],Vm[n]+W[n],tau_m)
+ #               update voltage
+                 Vm[n] =V_
+                 Vm[n]+=J_inh
+                 Vm[n]-=W[n]
+                 et[n] = t
             if event == 'P':
-                V_= V_update(t,et[n],Vm[n],tau_m)
+#                if n<NE:
                 W[n] = a*V_+V_update(t,et[n],W[n],tau_w)
+                V_= V_update(t,et[n],Vm[n]+W[n],tau_m)
                 #update voltage
-                Vm[n] =V_+J-W[n]
+                Vm[n] =V_
+                Vm[n]+=J
+                Vm[n]-=W[n]
                 et[n] = t
-            if Vm[n]>=Vthr:
+            if Vm[n] >= Vthr:
                 #Handle spontaneous spikes
                 Q.add((t,n,'S'))
         if event=='I':
-                #next input 
+            #next input 
             #np.random.seed() # if conn is generated on the go
             #make sure to insert noise even if event is ignored ! 
-            if n<800:
+            if n<NE+NI:
                 event_t = random.expovariate(expR)
                 Q.add((t+event_t,n,'I'))
 
@@ -188,39 +189,7 @@ def run(params,sim_time):
     print(params)
     print(sim_time)
     np.save('sim/%s'%hash_name,[st,gid,params])
-
-
     with open("sim/log.txt", "a") as myfile:
         myfile.write(params_json)
-
-    #with h5py.File('sim/'+str(hash_name),'w',libver='latest') as f:
-    #    f['st']  =st
-    #    f['uid']  =gid
-    #    f['params'] =params_json
     print(len(st)/N/(sim_time/1000))
-    return st, gid
-
-
-if __name__ == "__main__":
-    # Set params
-    params = {'Vthr': 20,
-              'Vres': 10,
-              'V0':0,
-              'tau_ref': 2.0,
-              'tau_m':40,
-              'd':3.5,
-              'N':1000,
-              'epsilon':0.7,
-              'p':0.1,
-              'g':300/700,
-              'J':2.2,
-              'eta':0.5,
-              'tau_w':25000.,
-              'a':0.0,
-              'b':0.001}
-    sim_time =100000
-
-	proc_n = multiprocessing.cpu_count()
-	pool = multiprocessing.Pool(proc_n)
-	result = pool.map(process_item, scientists)
-    run(params, sim_time)
+    return st,gid
