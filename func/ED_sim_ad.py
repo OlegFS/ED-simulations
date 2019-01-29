@@ -19,16 +19,18 @@ def load_obj(name ):
 
 # generate connectivity 
 def fixed_in_conn(NE,NI,p):
-    """Helper funvtion to generate fixed indegree"""
+    """Helper funvtion to generate fixed indegreei
+     Not excluding the double and self-connections"""
     conn = []
-    kE = int(p*NE)
-    kI  =int(p*NI)
+    kE = int(p*NE) # excitatory degrees
+    kI  =int(p*NI) # inhibitory degrees 
     for n in range(NE+NI):
         # Set fixed in-degree
         projections = np.hstack([np.random.randint(0,NE,kE),np.random.randint(NE,NE+NI,kI)])
+        # TODO: change to permutation
         for pp in projections:
             conn.append((pp,n)) # out-in
-    conn_sorted = sorted (conn)
+    conn_sorted = sorted(conn) # TODO: delete 
     conn_dict = {}
     conn_sorted = na(conn_sorted)
     for n in range(NE+NI):
@@ -45,8 +47,29 @@ def V_update(t,t0,I,tau):
 # Intializtion 
 
 def run(params,sim_time=1000000):
-    """Event-driven simualtion of the brunel network i
-        TODO: class? """
+    """Event-driven simualtion of adLIF network
+
+    Args:
+            [1] params (dict): network parameters
+                kwrds:
+                Vthr - firing threshold 
+                Vres
+                V0 TODO: Make sure that V0 is a part of the equation
+                tau_ref
+                tau_m
+                d - delay
+                N - Number of neurons
+                epsilon - inhibitory fraction
+                p - connection probability
+                J - coupling strength
+                g - relative inhibitory coupling
+                b - adaptation increment
+                a - subthreshold adaptation
+                tau_w - adaptation timeconstant
+            [2] sim_tim (str): Simulation time
+    Returns:
+            ts,gid (list,list): spike times, unit ids
+        """
 
     # Set params
     Vthr = params['Vthr']
@@ -69,12 +92,12 @@ def run(params,sim_time=1000000):
     b = params['b'] #adaptation increment
     a = params['a'] # subthreshold adaptation
     tau_w = params['tau_w']#timescale of adaptation
-    k = int(N*p)
-    kI = int(NI*p)
-    kE = int(NE*p)
+    k = int(N*p) # degrees
+    kI = int(NI*p) # inhibitory indegrees
+    kE = int(NE*p) # ex indegrees
     eta = params['eta'] #input in nu_ext/nu_thr
     # Process the parameters
-    nu_th = Vthr / (Jext*kE*tau_m)
+    nu_th = Vthr / (Jext*kE*tau_m) # Brunel 2000
     nu_ex = eta * nu_th
     p_rate = nu_ex
     # mean of exponential dist
@@ -90,9 +113,9 @@ def run(params,sim_time=1000000):
         save_obj(conn_dict, 'conn/%s_fixed_in.pkl'%NI)
     #init volatege
     Vm =np.random.normal(0,0.1,N)
-    W = np.random.normal(0,0.1,N)
-    W[:] = 0
-    wt = np.zeros([N])#time of previous adaptation event
+    W =np.zeros(N)# np.abs(np.random.normal(0,0.1,N))
+    #W[:] = 0
+    wt = np.zeros([N])#time of previous adaptation event #Kill? 
     spikes0 = Vm>Vthr
     #Q - is the main queue of events
     Q = SortedList()#np.zeros(N)
@@ -163,6 +186,7 @@ def run(params,sim_time=1000000):
                  Vm[n]+=J_inh
                  Vm[n]-=W[n]
                  et[n] = t
+
             if event == 'P':
 #                if n<NE:
                 W[n] = a*V_+V_update(t,et[n],W[n],tau_w)
@@ -172,9 +196,14 @@ def run(params,sim_time=1000000):
                 Vm[n]+=J
                 Vm[n]-=W[n]
                 et[n] = t
-            if Vm[n] >= Vthr:
+
+            if t!=Q[0][-3] or n!=Q[0][-2]:
+                if Vm[n] >= Vthr:
+                #Handle spikes only if there are no further events at this time
+                #for this neuron
                 #Handle spontaneous spikes
-                Q.add((t,n,'S'))
+                    Q.add((t,n,'S'))
+
         if event=='I':
             #next input 
             #np.random.seed() # if conn is generated on the go
@@ -182,7 +211,6 @@ def run(params,sim_time=1000000):
             if n<NE+NI:
                 event_t = random.expovariate(expR)
                 Q.add((t+event_t,n,'I'))
-
     params_json = json.dumps(params)
     hash_name = hashlib.sha256(params_json.encode('utf-8')).hexdigest()
     print(hash_name)
