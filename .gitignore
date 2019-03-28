@@ -2,6 +2,7 @@
 #
 /sim
 /figs
+/Figures
 /test
 /data
 /JZ
@@ -137,3 +138,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+#Pickle files
+#
+*.pkl

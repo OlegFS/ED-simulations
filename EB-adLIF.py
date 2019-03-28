@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 # Event-based adaptive LIF netowrk 
 from func.ED_sim_ad import *
 np.random.seed(12345)
@@ -14,12 +15,16 @@ if __name__ == "__main__":
               'N':1000,
               'epsilon':0.95,
               'p':0.1,
-              'g':1.0,#50/950,#200/800,#50/950,
-              'J':16.21,
-              'eta':0.5,
-              'tau_w':20000,
+              'g':5/95,
+              'J':(15.5*np.sqrt(5))/np.sqrt(80),#09.94868329805051377,#(3*np.sqrt(25))/np.sqrt(250),#25/np.sqrt(25),#09.94868329805051377,
+              'J_ext':1.7,
+              'input':'NE+NI',
+              'ex_rate':(0.09615384615384616,0.09615384615384616),
+              'eta':0.0,
+              'tau_w':2000,
               'a':0.0,
+              #'w':'E',
               'b':2}
-
-    sim_time =500000
+    print(params)
+    sim_time =350000
     run(params, sim_time)
