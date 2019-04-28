@@ -78,18 +78,30 @@ for i,epsilon in enumerate(EpsData):
     
 popMean_bic = np.nanmean(mean_bic,0)
 # Simulations 
-EIData = load_obj('Figures/data/EI_modelN=1000_bic_t16s')
+EIData = load_obj('Figures/data/EI_modelN=1000_bic_t16s_corrected')
 mIBI = EIData['mIBI']
 Eps = EIData['perc']
-g_mod = EIData['g_mod'][::-1]
+g_mod = na(EIData['g_mod'])#c_fromG
+
+# Select only intemediate points 
+#[1,0.85,0.8,0.6,0.4,0.3,0.2,0]
+# selection = [0,2,4,6,8,10,11,13]
+# mIBI = mIBI[:,selection] 
+# g_mod = g_mod[selection]
+
 relIBI = [mIBI[i,]/mIBI[i,0] for i in range(mIBI.shape[0])]
-EIpopMean_bic= np.nanmean(relIBI[2:-1],0)
+relIBI = na(relIBI)
+
 StaticBIC = na([8.9066666666666663, 2.6400000000000001, 1.46875])
 c = [0,0.5,1,1.5,3.,10.,40.]
 Kd =3
-bic_conc = 1-(1/(1+(na(c)/Kd)))
-c_fromG = ((1/(1-na(g_mod)))*Kd)-Kd
-c_fromG[0] = 60
+# bic_conc = 1-(1/(1+(na(c)/Kd)))
+# c_fromG = ((1/(1-na(g_mod)))*Kd)-Kd
+bic_conc =(1/(1+(na(c)/Kd)))
+c_fromG = ((1/na(g_mod)) -1)*Kd#
+
+c_fromG[-1] = 50
+# c_fromG = c_fromG[::-1]
 #with sns.color_palette("Blues_d",n_colors=12):
 col = sns.color_palette("winter",n_colors=6)
 # plt.figure(figsize=(5,5))
@@ -99,7 +111,7 @@ col = sns.color_palette("winter",n_colors=6)
 
 # plt.figure(figsize=(5,5))
 col = sns.color_palette('winter',n_colors=7)
-for i in range(1,len(EpsData)):
+for i in range(0,len(EpsData)):
 #         plt.figure(figsize=(5,5))
         plt.errorbar(na(c),mean_bic[i],sem_bic[i],fmt='o',color = col[i],capsize=8,markersize = 8, elinewidth=3,label=EpsData[i],alpha =1)
         plt.xscale('symlog')
@@ -128,7 +140,7 @@ plt.ylim([0,7])
 # for dat in mean_bic:
 #     plt.plot(bic_conc,dat,'-',color ='red',alpha =0.2)
 #plt.plot(bic_conc,popMean_bic/popMean_bic[0],'-o',linewidth = 4, color ='red',label ='Data 20-80% inh.')
-col = sns.color_palette('Reds_r',n_colors=8)
+
 # for i in range(2,len(Eps)-1): # take onle 20-80 %
 #     plt.plot(g_mod[::-1], mIBI[i,:],'o-',color= col[i],label=Eps[i])
 # plt.legend()
@@ -139,24 +151,25 @@ col = sns.color_palette('Reds_r',n_colors=8)
 col = sns.color_palette('rocket',n_colors=7)
 #plt.savefig('Figures/figure6A_Eps%s.pdf'%(0),fmt = 'pdf')  
 # mask = [0,2,3,5,7,9,11,13]
-# for i in range(3,len(Eps)-1): # take onle 20-80 %
-#         #plt.figure(figsize=(5,5))
-#         plt.plot(c_fromG[:], mIBI[i,:]/mIBI[i,:][-1],'--s',color= col[i], #/mIBI[i,:][0]
-#                label=Eps[i],alpha =0.7,markersize = 8)
-#         plt.xscale('symlog')
-#         plt.xticks(c,g_mod)
-#         plt.ylim([0,7])
-# choice =4
-plt.plot(c_fromG[:], mIBI[choice+2,:]/mIBI[choice+2,-1],'--s',color= 'r',label=Eps[choice+2],linewidth=3,markersize = 8)#mIBI[choice+1,:][0]
+for i in range(2,len(Eps)-1): # take onle 20-80 %
+         #plt.figure(figsize=(5,5))
+    if Eps[i] ==0.2:
+        plt.plot(c_fromG, relIBI[i,:],'-s',color= 'r',label=Eps[i],linewidth=3,markersize = 8)
+    else:
+        plt.plot(c_fromG[:], relIBI[i,:],'-s',color= col[i], #/mIBI[i,:][0]
+                label=Eps[i],alpha =0.7,markersize = 8)
+    plt.xscale('symlog')
+    plt.xticks(c,g_mod)
+    plt.ylim([0,7])
 plt.xscale('symlog')
 plt.ylim([0,7])
 plt.xticks(c,c)
         #plt.savefig('Figures/figure6A_Eps%s.pdf'%(i),fmt = 'pdf')  
 #/mIBI[choice+2,:][0]##
 
-plt.plot(c_fromG[::-1][0:3], StaticBIC/StaticBIC[0],'-s', 
+plt.plot(c_fromG[:][0:3], StaticBIC/StaticBIC[0],'-', 
           color = 'gray',markersize = 8,linewidth = 3,label ='no adaptation' )
-plt.plot(c_fromG[::-1][2],(StaticBIC/StaticBIC[0])[2],'*',color='gray',markersize = 18,markeredgecolor = 'k')
+plt.plot(c_fromG[:][2],(StaticBIC/StaticBIC[0])[2],'*',color='gray',markersize = 18,markeredgecolor = 'k')
 # plt.text(0.9, 0.45, 'no adaptation',fontsize = 10 ,color = 'gray')
 
 plt.ylim([0,7])
@@ -188,7 +201,7 @@ plt.subplot(grid[0, 1])
 #Prepare the data 
 
 meanBic = []
-EpsData = [0.05,0.1,0.95]
+EpsData = [0.05,0.25,0.1,0.95]
 CD = ['peru','navy','red'][::-1]
 CM = ['C0','C0','C0']
 meanBic = []
@@ -203,29 +216,26 @@ for i,epsilon in enumerate(EpsData):
 popMean_bic = np.nanmean(mean_bic,0)
 
 # Simulations 
-mIBI = EIData['mIBI']
-Eps = EIData['perc']
-g_mod = EIData['g_mod']
-relIBI =[mIBI[i,]/mIBI[i,0] for i in range(mIBI.shape[0])] 
-EIpopMean_bic= np.nanmedian(relIBI[2:-1],0)
 StaticBIC = na([8.9066666666666663, 2.6400000000000001, 1.46875])
-
 col = sns.color_palette("Paired",8)#sns.color_palette("winter",n_colors=3)
 
 col_ind = [1,5,7]
 c = na(c)
 sem_bic = na(sem_bic)
-for i in range(len(EpsData)):
+for ind,i in enumerate([0,2,3]):
     x = c[np.isfinite(mean_bic[i])]
     y = mean_bic[i][np.isfinite(mean_bic[i])]
     er = sem_bic[i][np.isfinite(mean_bic[i])]
-    plt.errorbar(x,y,er,fmt='o',color = col[col_ind[i]], elinewidth=3,label=EpsData[i],alpha =1,
+    plt.errorbar(x,y,er,fmt='o',color = col[col_ind[ind]], elinewidth=3,label=EpsData[i],alpha =1,
                  capsize=8,markersize = 8) 
+    
+plt.errorbar(c,mean_bic[1],sem_bic[1],fmt='o-',color = 'darkblue',capsize=8, linewidth=3,label='control',markersize = 8)
+    
 plt.xscale('symlog')
 plt.legend()
 col_ind = [0,4,6]
 for ind,i in enumerate([0,1,-1]):
-    plt.plot(c_fromG[:], mIBI[i,:]/mIBI[i,-1],'--sr',color= col[col_ind[ind]],label=Eps[i],alpha =1,linewidth=3,markersize = 8)
+    plt.plot(c_fromG[:], relIBI[i,:],'--sr',color= col[col_ind[ind]],label=Eps[i],alpha =1,linewidth=3,markersize = 8)
 plt.yscale('symlog')
 
 

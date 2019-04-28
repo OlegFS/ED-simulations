@@ -69,7 +69,7 @@ def V_update(t,t0,I,tau):
 
 # Intializtion 
 
-def run(params,sim_time=10000000):
+def run(params,sim_time=200000):
     """Event-driven simualtion of adLIF network
     Args:
             [1] params (dict): network parameters
@@ -184,6 +184,7 @@ def run(params,sim_time=10000000):
     #init volatege
     Vm =np.random.normal(17,0.1,N)
     W =np.abs(np.random.normal(10,3,N))
+    Vm[:]=0.
     if b==0:
         W[:]=0
     W[Nw:] = 0

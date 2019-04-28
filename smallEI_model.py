@@ -320,6 +320,7 @@ with sns.color_palette("Oranges"):
 
 
 ### Model with low variance, check if I can scale it to 1000 neurons 
+Taus = [0]
 params = {'Vthr': 20,
           'Vres': 10,
           'V0':0,
@@ -328,35 +329,31 @@ params = {'Vthr': 20,
           'd':3.5,
           'N':1000,
           'epsilon':0.0,
-          'p':0.1,
+          'p':0.2,
           'g':0.0,
-          'J':0.,#25/np.sqrt(25),#0.94868329805051377,
+          'J':0.,#25/1p.sqrt(25),#0.94868329805051377,
           'J_ext':0.,
           'input':'NE+NI',
           'ex_rate':0,
           'eta':0.0,
-          'tau_w':16000,
+          'tau_w':18000,
           'a':0.0,
-#           'conn':'rand',
+#         'conn':'rand',
           #'w':'E',
           'b':2}
-
-Eps =[0.05,0.1,0.2,0.3,0.5,0.7,0.8,0.93]#,0.99,0.994]
+Eps =[0.04,0.04,0.5,0.93]#,0.1,0.2,0.3,0.5,0.7,0.8,0.93]#,0.99,0.994]
 #[0.05,0.1,0.2,0.3,0.5,0.7,0.8,0.93]#,0.99,0.994]
 #Eps =[0.05,0.2,0.5,0.8,0.95,]
 
-#
-#Gs =[9.0,8/2,1.0,2/8,5/95,]
-Gs =[9.0,9.0,4.0,7/3,1.0,3/7,0.25,7/93]
-
-#{'Vthr': 20,
+# Gs =[9.0,8/2,1.0,2/8,5/95,]
+Gs =[96/4,9.0,1.0,2/8,7/93]#4.0,7/3,1.0,3/7,0.25,7/93]
     
-Js = [16.0]#[7.2,9.0,14.4] ,14.4]# 6.7,6.8,7.0, 7.2
+Js = [10.0]#[7.2,9.0,14.4] ,14.4]# 6.7,6.8,7.0, 7.2
 ex_rates =[0.09615384615384616/5]#,0.09615384615384616/2]#
 Jexts = [8.0]#,3.0]#,6.7 - is not very nice
 N = params['N']
 
-g_modifier=  [1]#[0,0.5,1.0,1.5,2.0,4.0]#4.0]#[0,0.5,1,1.5]#,2.0,4.0]#[0.5,1.0,1.5]
+g_modifier=  [1.]#[0,0.5,1.0,1.5,2.0,4.0]#4.0]#[0,0.5,1,1.5]#,2.0,4.0]#[0.5,1.0,1.5]
 burst_map = np.zeros([len(Eps),len(g_modifier)])*np.nan
 burstCV_map = np.zeros([len(Eps),len(g_modifier)])*np.nan
 burstR_map =  np.zeros([len(Eps),len(g_modifier)])*np.nan
@@ -376,7 +373,6 @@ for e_index,epsilon in enumerate(Eps):
                         #    params['intput']= 'NE'
                         #    j = 16
                         #    g = 0.6
-                        
                         params['epsilon']  = epsilon
                         params['J'] =(j*np.sqrt(5))/np.sqrt((N-(epsilon*N))*0.1)
                         params['J_ext'] = jex#params['J']
@@ -386,7 +382,7 @@ for e_index,epsilon in enumerate(Eps):
                             st,gid = read(params)
                             st= na(st)
                             gid= na(gid)
-                            sim_time = 3000000#np.max(st)
+                            sim_time = 500000#np.max(st)
                             bin_size = 20
                             #plt.figure(figsize=(25,3))
                             sc,_ = np.histogram(st,np.arange(0,sim_time,bin_size))
@@ -419,10 +415,11 @@ for e_index,epsilon in enumerate(Eps):
                             if True:
                                 
                                 plt.figure(figsize=(25,5))
+                                plt.title([epsilon,Gs[e_index]])
                                 plt.plot(signal); 
                                 plt.plot(bInd,peakAmp,'*')
                                 #plt.subplot(len(g_modifier),1,g_i+1)
-                                #plt.plot(st,gid,'.',markersize = 2.1)
+#                                 plt.plot(st,gid,'.',markersize = 2.1)
 #                           plt.xlim([1000,300000])
                                 #plt.plot(np.arange(0,250000-20,20)[1000:],sc)#-g_i*5)#-np.mean(sc))/np.std(sc))-(g_i*40))
                                 #plt.xlabel('time (ms)')
@@ -444,14 +441,14 @@ for e_index,epsilon in enumerate(Eps):
                             
 
 # Export data
-from func.ED_sim_ad import save_obj, load_obj
-save_obj({'perc':Eps,
-                         'mIBI':burst_map[:,0],
-                         'cvIBI':burstCV_map[:,0],
-                         'aIBI':burstA_map[:,0],
-                         'rIBI':burstR_map[:,0],
-                         'Signal':S},
-                     'Figures/data/EI_modelN=1000_16')
+# from func.ED_sim_ad import save_obj, load_obj
+# save_obj({'perc':Eps,
+#                          'mIBI':burst_map[:,0],
+#                          'cvIBI':burstCV_map[:,0],
+#                          'aIBI':burstA_map[:,0],
+#                          'rIBI':burstR_map[:,0],
+#                          'Signal':S},
+#                      'Figures/data/EI_modelN=1000_16')
 
 # sns.despine()
 # plt.yticks(np.arange(-len(Eps),1,1)+1,Eps[::-1])
@@ -497,7 +494,8 @@ Js = [16.0]#[7.2,9.0,14.4] ,14.4]# 6.7,6.8,7.0, 7.2
 ex_rates =[0.09615384615384616/5]#,0.09615384615384616/2]#
 Jexts = [8.0]#,3.0]#,6.7 - is not very nice
 N = params['N']
-g_modifier=[0,0.14285714,0.2,0.25,0.3,0.33333333,0.4,0.5,0.6,0.76923077,0.8,0.85,0.93023256,1]
+g_modifier=[1, 0.85714286, 0.75,0.66666667,0.5,0.23076923,  0.06976744, 0]
+# [0,0.14285714,0.2,0.25,0.3,0.33333333,0.4,0.5,0.6,0.76923077,0.8,0.85,0.93023256,1]
 #[1,0.85,0.8,0.6,0.4,0.3,0.2,0]#[0,0.1,0.25,0.35,0.5,0.75,0.8,0.9,1][::-1]# [0,0.1,0.25,0.35,0.5,0.75,0.9,1][::-1]
 burst_map = np.zeros([len(Eps),len(g_modifier)])*np.nan
 burstCV_map = np.zeros([len(Eps),len(g_modifier)])*np.nan
@@ -593,20 +591,20 @@ save_obj({'perc':Eps,
             'aIBI':burstA_map,
             'rIBI':burstR_map,
             'Signal':S},
-            'Figures/data/EI_modelN=1000_bic_t16s')
+            'Figures/data/EI_modelN=1000_bic_t16s_corrected')
 
 
 
 
-from func.ED_sim_ad import save_obj, load_obj
-save_obj({'perc':Eps,
-           'g_mod':g_modifier,
-            'mIBI':burst_map,
-            'cvIBI':burstCV_map,
-            'aIBI':burstA_map,
-            'rIBI':burstR_map,
-            'Signal':S},
-            'Figures/data/EI_modelN=1000_bic_t16s_full')
+# from func.ED_sim_ad import save_obj, load_obj
+# save_obj({'perc':Eps,
+#            'g_mod':g_modifier,
+#             'mIBI':burst_map,
+#             'cvIBI':burstCV_map,
+#             'aIBI':burstA_map,
+#             'rIBI':burstR_map,
+#             'Signal':S},
+#             'Figures/data/EI_modelN=1000_bic_t16s_full')
 
 
 
@@ -639,10 +637,13 @@ params = {'Vthr': 20,
 #           'seed':1234,
           'b':2}
 
-Eps =[0.93]#,0.93]#[0.93,0.91,0.92,0.93,0.94,0.95,0.96]#0.05,0.1,0.2,0.3,0.5,0.7,0.8,0.93,
-#
-Gs =[7/93]#,7/93]#[7/93,9/91,8/92,7/93,6/94,5/95,4/96]#9.0,9.0,8/2,7/3,1.0,3/7,2/8,7/93,
+Eps =[0.04,0.2,0.5,0.8,0.93]#,0.1,0.2,0.3,0.5,0.7,0.8,0.93]#,0.99,0.994]
+#[0.05,0.1,0.2,0.3,0.5,0.7,0.8,0.93]#,0.99,0.994]
+#Eps =[0.05,0.2,0.5,0.8,0.95,]
 
+#
+# Gs =[9.0,8/2,1.0,2/8,5/95,]
+Gs =[9.0,4.0,1.0,2/8,7/93]#4.0,7/3,1.0,3/7,0.25,7/93]
 
 
 #{'Vthr': 20,
@@ -653,7 +654,10 @@ Jexts = [8.0]#,3.0]#,6.7 - is not very nice
 N = params['N']
 Taus = [0]
 
-g_modifier=[1,0.85,0.8,0.6,0.4,0.3,0.2,0]#[0,0.1,0.25,0.35,0.5,0.75,0.8,0.9,1][::-1]# [0,0.1,0.25,0.35,0.5,0.75,0.9,1][::-1]
+#g_modifier=[1,0.85714286, 0.75,0.66666667,0.5,0.23076923,  0.06976744]
+g_modifier=[0.14285714,0.25,0.33333333,0.5,0.76923077,0.93023256,1.][::-1]
+# g_modifier=[0,0.14285714,0.2,0.25,0.3,0.33333333,0.4,0.5,0.6,0.76923077,0.8,0.85,0.93023256,1]
+# [1,0.85,0.8,0.6,0.4,0.3,0.2,0]#[0,0.1,0.25,0.35,0.5,0.75,0.8,0.9,1][::-1]# [0,0.1,0.25,0.35,0.5,0.75,0.9,1][::-1]
 burst_map = np.zeros([len(Eps),len(g_modifier)])*np.nan
 burstCV_map = np.zeros([len(Eps),len(g_modifier)])*np.nan
 burstR_map =  np.zeros([len(Eps),len(g_modifier)])*np.nan
@@ -712,7 +716,7 @@ for e_index,epsilon in enumerate(Eps):
                             burstR_map[e_index,g_i] =np.corrcoef(ibis,peakAmp[:-1])[0,1]
                             burstA_map[e_index,g_i] =np.mean(peakAmp)
                             
-                            if True:
+                            if False:
                                 
                                 plt.figure(figsize=(25,5))
                                 plt.plot(signal); 
@@ -753,8 +757,42 @@ for e_index,epsilon in enumerate(Eps):
 
 
 
-
-
+meanBic = []
+sem_bic = []
+EpsData = [0.2]#][0.25,0.2,0.3,0.5,0.7,0.8]
+choice = 0
+mean_bic=[]
+bic_sat = []
+for i,epsilon in enumerate(EpsData):
+    bic_ = na(pd.read_excel('Figures/data/bic_IBI_raw_corr.xlsx',str(epsilon)))[:7,1:]
+    rel_bic = na(bic_)/bic_[0,:]
+    n = rel_bic.shape[1]
+    mean_bic.append(np.nanmean(rel_bic,1))
+    sem_bic.append([np.std(rel_bic[k,:])/np.sqrt(n) for k in range(0,len(rel_bic))])#
+g_mod = g_modifier
+    
+StaticBIC = na([8.9066666666666663, 2.6400000000000001, 1.46875])
+c = [0,0.5,1,1.5,3.,10.,40.]
+Kd =3
+bic_conc =(1/(1+(na(c)/Kd)))
+c_fromG = ((1/na(g_mod)) -1)*Kd#(bic_conc-(Kd*bic_conc))/Kd#
+#((1/(1-na(g_mod[:])))*Kd)-Kd
+# c_fromG[-1] = 0
+# plt.plot(mean_bic[0])
+col = sns.color_palette('winter',n_colors=7)
+plt.plot(na(c),bic_/bic_[0],'-ok',alpha = 0.7)
+for i in range(0,len(EpsData)):
+#         plt.figure(figsize=(5,5))
+        plt.errorbar(na(c),mean_bic[i],sem_bic[i],fmt='o',color = col[i],capsize=8,markersize = 8, elinewidth=3,label=EpsData[i],alpha =1)
+#         plt.xscale('symlog')
+        plt.xticks(c,c)
+        plt.legend()
+#         plt.ylim([0,7])
+        
+select =1
+        
+plt.plot(c_fromG,burst_map[select]/burst_map[select][0],'-r')
+plt.xscale('symlog')
 #====================================================================================================================
 
 
@@ -1387,7 +1425,7 @@ Gs =[19.0]#,9.0,4.0,7/3,1.0,3/7,0.25,5/95]
 
 #{'Vthr': 20,
     
-Taus = [15000]
+Taus = [18000]
 Js = [20.]#[7.2,9.0,14.4] ,14.4]# 6.7,6.8,7.0, 7.2
 ex_rates =[0.09615384615384616/5]#,0.09615384615384616/2]#
 Jexts = [2.]#,3.0]#,6.7 - is not very nice
